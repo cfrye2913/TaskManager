@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>To-Do List</title>
+  <style>
+    :root{
+      --bg:#f4f6f8;
+      --card:#ffffff;
+      --muted:#888;
+      --accent:#0b74de;
+      --danger:#e24b4b;
+      --rounded:10px;
+      --shadow: 0 3px 10px rgba(20,20,30,0.08);
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:36px;
+    }
+
+    .todo-container{
+      width:360px;
+      background:var(--card);
+      border-radius:var(--rounded);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+
+    h1{
+      margin:0 0 10px 0;
+      font-size:18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+
+    .counts { font-size:13px; color:var(--muted); }
+
+    .input-row{
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    #new-task{
+      flex:1;
+      padding:8px 10px;
+      border:1px solid #e6e9ee;
+      border-radius:8px;
+      outline:none;
+      font-size:14px;
+    }
+    #add-btn{
+      padding:8px 10px;
+      border-radius:8px;
+      border:none;
+      background:var(--accent);
+      color:white;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    section{
+      margin-top:14px;
+    }
+
+    .list{
+      margin:8px 0 0 0;
+      padding:0;
+      list-style:none;
+      border-radius:8px;
+      overflow:hidden;
+      border:1px solid #f0f2f4;
+    }
+
+    .task{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px;
+      background:white;
+      border-bottom:1px solid #f6f7f8;
+      font-size:14px;
+    }
+
+    .task:last-child{ border-bottom: none; }
+
+    .task .text{
+      flex:1;
+      word-break:break-word;
+    }
+
+    .task.done .text{
+      text-decoration:line-through;
+      color:var(--muted);
+    }
+
+    .icon-btn{
+      border: none;
+      background:transparent;
+      cursor:pointer;
+      padding:6px;
+      border-radius:6px;
+      font-size:13px;
+    }
+
+    .del{
+      background:var(--danger);
+      color:white;
+      padding:6px 8px;
+      border-radius:6px;
+    }
+
+    .section-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      padding:6px 4px;
+      user-select:none;
+      cursor:default;
+      font-size:14px;
+    }
+
+    .collapse-toggle{
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      display:flex;
+      gap:6px;
+      align-items:center;
+      font-weight:600;
+    }
+
+    .small{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .clear-btn{
+      background:#eceff1;
+      color:#333;
+      border-radius:6px;
+      padding:6px 8px;
+      border:none;
+      cursor:pointer;
+      font-size:13px;
+    }
+
+    /* small responsive */
+    @media (max-width:420px){
+      .todo-container{ width:94%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="todo-container" role="application" aria-label="To-Do app">
+    <h1>
+      <span>My To-Do</span>
+      <span class="counts" id="counts">0 active</span>
+    </h1>
+
+    <div class="input-row">
+      <input id="new-task" placeholder="Add a new task and press Enter" aria-label="New task">
+      <button id="add-btn" title="Add task">Add</button>
+    </div>
+
+    <!-- Active tasks -->
+    <section aria-labelledby="active-heading">
+      <div class="section-header">
+        <div style="display:flex; align-items:center; gap:8px">
+          <strong id="active-heading">Active</strong>
+          <span class="small" id="active-count">0</span>
+        </div>
+      </div>
+      <ul id="active-list" class="list" aria-live="polite"></ul>
+    </section>
+
+    <!-- Completed tasks collapsible -->
+    <section aria-labelledby="completed-heading">
+      <div class="section-header" style="margin-top:8px;">
+        <div style="display:flex; align-items:center; gap:8px">
+          <button id="collapse-btn" class="collapse-toggle" aria-expanded="true" aria-controls="completed-list">
+            <span id="collapse-icon">▾</span>
+            <strong id="completed-heading">Completed</strong>
+            <span class="small" id="completed-count">0</span>
+          </button>
+        </div>
+        <div class="controls">
+          <button id="clear-completed" class="clear-btn" title="Clear completed">Clear</button>
+        </div>
+      </div>
+
+      <ul id="completed-list" class="list" style="margin-top:6px;" role="region" aria-live="polite"></ul>
+    </section>
+  </div>
+
+  <script>
+    const input = document.getElementById("new-task");
+    const addBtn = document.getElementById("add-btn");
+    const activeListEl = document.getElementById("active-list");
+    const completedListEl = document.getElementById("completed-list");
+    const countsEl = document.getElementById("counts");
+    const activeCountEl = document.getElementById("active-count");
+    const completedCountEl = document.getElementById("completed-count");
+    const collapseBtn = document.getElementById("collapse-btn");
+    const collapseIcon = document.getElementById("collapse-icon");
+    const clearCompletedBtn = document.getElementById("clear-completed");
+
+    // Load tasks & UI state from localStorage
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    // completedCollapsed = true means collapsed; default false (expanded)
+    let completedCollapsed = JSON.parse(localStorage.getItem("completedCollapsed"));
+    if (typeof completedCollapsed !== 'boolean') completedCollapsed = false;
+
+    function save() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function saveCollapse() {
+      localStorage.setItem("completedCollapsed", JSON.stringify(completedCollapsed));
+    }
+
+    function makeTaskElement(task, index) {
+      const li = document.createElement("li");
+      li.className = "task" + (task.done ? " done" : "");
+      li.setAttribute("data-index", index);
+
+      // checkbox (toggle)
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!task.done;
+      cb.setAttribute("aria-label", task.done ? "Mark as not done" : "Mark as done");
+      cb.addEventListener("change", (e) => {
+        tasks[index].done = !!e.target.checked;
+        save();
+        renderTasks();
+      });
+
+      // text
+      const text = document.createElement("div");
+      text.className = "text";
+      text.textContent = task.text;
+      text.title = task.text;
+
+      // delete button
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "Delete";
+      del.title = "Delete task";
+      del.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tasks.splice(index, 1);
+        save();
+        renderTasks();
+      });
+
+      // allow clicking the text to toggle done as well
+      text.addEventListener("click", () => {
+        tasks[index].done = !tasks[index].done;
+        save();
+        renderTasks();
+      });
+
+      li.appendChild(cb);
+      li.appendChild(text);
+      li.appendChild(del);
+
+      return li;
+    }
+
+    function renderTasks() {
+      // split tasks
+      const active = tasks.map((t,i) => ({t,i})).filter(x => !x.t.done);
+      const completed = tasks.map((t,i) => ({t,i})).filter(x => x.t.done);
+
+      // counts
+      activeCountEl.textContent = active.length;
+      completedCountEl.textContent = completed.length;
+      countsEl.textContent = `${active.length} active`;
+
+      // render active list
+      activeListEl.innerHTML = "";
+      if (active.length === 0) {
+        const li = document.createElement("li");
+        li.className = "task";
+        li.style.justifyContent = "center";
+        li.style.color = "var(--muted)";
+        li.textContent = "No active tasks";
+        activeListEl.appendChild(li);
+      } else {
+        active.forEach(({t,i}) => {
+          activeListEl.appendChild(makeTaskElement(t, i));
+        });
+      }
+
+      // render completed list (respect collapsed)
+      completedListEl.innerHTML = "";
+      if (completed.length === 0) {
+        const li = document.createElement("li");
+        li.className = "task";
+        li.style.justifyContent = "center";
+        li.style.color = "var(--muted)";
+        li.textContent = "No completed tasks";
+        completedListEl.appendChild(li);
+      } else {
+        completed.forEach(({t,i}) => {
+          completedListEl.appendChild(makeTaskElement(t, i));
+        });
+      }
+
+      // collapse behaviour
+      if (completedCollapsed) {
+        completedListEl.style.display = "none";
+        collapseIcon.textContent = "▸";
+        collapseBtn.setAttribute("aria-expanded", "false");
+      } else {
+        completedListEl.style.display = "";
+        collapseIcon.textContent = "▾";
+        collapseBtn.setAttribute("aria-expanded", "true");
+      }
+    }
+
+    // add task helper
+    function addTaskFromInput() {
+      const text = input.value.trim();
+      if (!text) return;
+      tasks.push({ text, done: false, createdAt: Date.now() });
+      input.value = "";
+      save();
+      renderTasks();
+      input.focus();
+    }
+
+    // events
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") addTaskFromInput();
+    });
+    addBtn.addEventListener("click", addTaskFromInput);
+
+    collapseBtn.addEventListener("click", () => {
+      completedCollapsed = !completedCollapsed;
+      saveCollapse();
+      renderTasks();
+    });
+
+    clearCompletedBtn.addEventListener("click", () => {
+      const hasCompleted = tasks.some(t => t.done);
+      if (!hasCompleted) return;
+      if (!confirm("Delete all completed tasks?")) return;
+      tasks = tasks.filter(t => !t.done);
+      save();
+      renderTasks();
+    });
+
+    // keyboard accessibility: press 'c' to toggle completed collapse when input not focused
+    document.addEventListener("keydown", (e) => {
+      if (document.activeElement === input) return;
+      if (e.key === "c" || e.key === "C") {
+        completedCollapsed = !completedCollapsed;
+        saveCollapse();
+        renderTasks();
+      }
+    });
+
+    // initial render
+    renderTasks();
+  </script>
+</body>
+</html>
